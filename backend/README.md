@@ -19,3 +19,6 @@ The backend is built with FastAPI and designed around an autonomous agentic flow
 ### 4. Structured Response Generation
 * The final output is structured into a clean JSON response containing the formatted explanation and an array of source citations (URLs) discovered during the agent's search phase.
 * This response is then returned to the frontend for final rendering.
+
+## Credits & References
+- The lightweight, credential-free Reddit data extraction in `reddit_client.py` is inspired by standard public JSON API scraping patterns, similar to the approaches implemented in [reddit-json-scraper](https://github.com/0anxt/reddit-json-scraper).
