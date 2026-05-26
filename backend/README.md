@@ -7,10 +7,15 @@ The backend is built with FastAPI and designed around an autonomous agentic flow
 * The backend appends `.json` to the URL, fetching the raw data directly from Reddit's public endpoints.
 * A dedicated parsing utility aggressively prunes the massive JSON payload. It filters out metadata noise, isolating only the essential text: the post title, the main body (`selftext`), and the top-level comments.
 
-### 2. Agent Initialization & Tool Calling
+### 2. Agent Initialization & Tool Calling (with Transient RAG)
 * The cleaned text is passed to the LLM (OpenAI).
-* The LLM is initialized as an **Agent** equipped with a `search_web` tool (utilizing OpenAI's Function/Tool Calling capabilities).
-* The agent analyzes the Reddit text and autonomously decides which niche terms, concepts, or implicit contexts require external knowledge. It triggers the web search tool dynamically to retrieve real-time context.
+* The LLM is initialized as an **Agent** equipped with a `search_web` tool.
+* **Transient RAG Pipeline**: To optimize the LLM context window and filter out web noise:
+  1. The `search_web` tool queries the web to retrieve a larger set of search results (10-15 results).
+  2. The results are split into smaller text chunks.
+  3. It generates embeddings for the query and all chunks using OpenAI's `text-embedding-3-small` model.
+  4. It calculates semantic similarity in-memory using `numpy` (without requiring a persistent database), selecting only the top-K most relevant chunks.
+  5. The agent receives only this highly curated, relevant context to construct its explanation.
 
 ### 3. Context Synthesis & Constraint Enforcement
 * Once the agent gathers sufficient context from the web, it synthesizes the information.
@@ -19,6 +24,13 @@ The backend is built with FastAPI and designed around an autonomous agentic flow
 ### 4. Structured Response Generation
 * The final output is structured into a clean JSON response containing the formatted explanation and an array of source citations (URLs) discovered during the agent's search phase.
 * This response is then returned to the frontend for final rendering.
+
+## Architectural Decisions: In-Memory Transient RAG
+
+Rather than integrating a heavy local vector database (like `faiss-cpu`) or loading heavy transformer model weights locally for semantic search, the system uses an **In-Memory Transient RAG** approach:
+- **Lightweight Dependencies**: Calculating cosine similarity using `numpy` avoids importing and compiling heavy C++ library bindings like `faiss-cpu`, ensuring seamless installation across platforms 
+- **Fast Execution & Low Footprint**: The retrieval is transient and scoped to the lifecycle of a single HTTP request. For 10-15 search results broken into ~40 chunks, a simple cosine similarity calculation in memory executes in a few milliseconds, without the overhead of disk operations or maintaining database server connections.
+- **Cost-Effective Semantic Quality**: Using OpenAI's `text-embedding-3-small` provides state-of-the-art vector representations for cents ($0.02 per million tokens), matching the quality of local models without downloading gigabytes of model weights.
 
 ## Credits & References
 - The lightweight, credential-free Reddit data extraction in `reddit_client.py` is inspired by standard public JSON API scraping patterns, similar to the approaches implemented in [reddit-json-scraper](https://github.com/0anxt/reddit-json-scraper).
