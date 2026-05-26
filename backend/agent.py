@@ -2,7 +2,7 @@ import os
 import logging
 from typing import Dict, List, Set, Optional
 from openai import OpenAI
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 from schemas import ExplanationResponse
 
 logger = logging.getLogger(__name__)
