@@ -117,5 +117,59 @@ class TestAppRoutes(unittest.TestCase):
         self.assertTrue(SEARCH_TOOL.get("function", {}).get("strict"))
         self.assertFalse(SEARCH_TOOL.get("function", {}).get("parameters", {}).get("additionalProperties"))
 
+class TestAgentSearch(unittest.TestCase):
+    @patch("agent.DDGS")
+    def test_search_web_semantic_rag(self, mock_ddgs):
+        # 1. Mock DDGS search results
+        mock_instance = mock_ddgs.return_value.__enter__.return_value
+        mock_instance.text.return_value = [
+            {"title": "Uterus Piñata Party", "href": "https://url1.com", "body": "A uterus piñata for a hysterectomy celebration."},
+            {"title": "Google Search Engine", "href": "https://url2.com", "body": "A company specializing in internet-related services."}
+        ]
+
+        # 2. Mock OpenAI client
+        mock_client = MagicMock()
+        
+        # Mock embeddings for query "hysterectomy party" and the 2 chunks
+        query_emb = [0.1] * 1536
+        chunk1_emb = [0.1] * 1536  # identical to query (similarity 1.0)
+        chunk2_emb = [-0.1] * 1536 # opposite (similarity -1.0)
+
+        # Mock embedding_response for chunks
+        mock_data1 = MagicMock()
+        mock_data1.embedding = chunk1_emb
+        mock_data2 = MagicMock()
+        mock_data2.embedding = chunk2_emb
+        
+        mock_chunk_response = MagicMock()
+        mock_chunk_response.data = [mock_data1, mock_data2]
+        
+        # Mock embedding_response for query
+        mock_query_data = MagicMock()
+        mock_query_data.embedding = query_emb
+        mock_query_response = MagicMock()
+        mock_query_response.data = [mock_query_data]
+
+        # Configure mock client.embeddings.create side_effect
+        mock_client.embeddings.create.side_effect = [
+            mock_chunk_response, # first call is for chunk_texts
+            mock_query_response  # second call is for query
+        ]
+
+        # Call search_web
+        from agent import search_web
+        result = search_web("hysterectomy party", client=mock_client, max_results=2, top_k=2)
+
+        # Assertions
+        self.assertIn("Title: Uterus Piñata Party", result)
+        self.assertIn("Title: Google Search Engine", result)
+        self.assertIn("Relevance Score: 1.0000", result)
+        self.assertIn("Relevance Score: -1.0000", result)
+        
+        # Verify chunks ordering. "Uterus Piñata Party" should appear first.
+        pos_uterus = result.index("Uterus Piñata Party")
+        pos_google = result.index("Google Search Engine")
+        self.assertTrue(pos_uterus < pos_google)
+
 if __name__ == "__main__":
     unittest.main()
