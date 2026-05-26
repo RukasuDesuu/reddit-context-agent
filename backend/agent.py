@@ -7,25 +7,95 @@ from schemas import ExplanationResponse
 
 logger = logging.getLogger(__name__)
 
-def search_web(query: str, max_results: int = 5) -> str:
+def search_web(query: str, client: OpenAI, max_results: int = 15, top_k: int = 5) -> str:
     """
-    Performs a DuckDuckGo web search and returns formatted results.
+    Performs a DuckDuckGo web search, chunks the results, embeds them using OpenAI,
+    ranks them by semantic similarity to the query, and returns the top_k most relevant chunks.
     """
-    logger.info(f"Executing web search for: {query}")
+    logger.info(f"Executing semantic web search for: {query}")
     try:
+        # 1. Fetch more raw results from DuckDuckGo
         with DDGS() as ddgs:
             results = list(ddgs.text(query, max_results=max_results))
             if not results:
                 return "No search results found."
-            formatted = []
-            for r in results:
-                title = r.get("title", "No Title")
-                href = r.get("href", "")
-                body = r.get("body", "")
-                formatted.append(f"Title: {title}\nURL: {href}\nSnippet: {body}\n---")
-            return "\n".join(formatted)
+
+        # 2. Extract text and metadata for each result
+        chunks = []
+        for r in results:
+            title = r.get("title", "No Title")
+            href = r.get("href", "")
+            body = r.get("body", "")
+            if not body:
+                continue
+            
+            # Text to embed
+            text_to_embed = f"Title: {title}. Snippet: {body}"
+            chunks.append({
+                "title": title,
+                "url": href,
+                "body": body,
+                "text_to_embed": text_to_embed
+            })
+
+        if not chunks:
+            return "No valid search result content found."
+
+        # 3. Generate embeddings in batch for all chunks
+        logger.info(f"Generating embeddings for {len(chunks)} search chunks")
+        chunk_texts = [c["text_to_embed"] for c in chunks]
+        
+        # We call OpenAI embeddings API
+        embedding_response = client.embeddings.create(
+            input=chunk_texts,
+            model="text-embedding-3-small"
+        )
+        doc_vectors = [data.embedding for data in embedding_response.data]
+
+        # Generate embedding for the query
+        query_response = client.embeddings.create(
+            input=query,
+            model="text-embedding-3-small"
+        )
+        query_vector = query_response.data[0].embedding
+
+        # 4. Compute cosine similarities using numpy
+        import numpy as np
+        q = np.array(query_vector)
+        docs = np.array(doc_vectors)
+        
+        q_norm = np.linalg.norm(q)
+        if q_norm > 0:
+            q = q / q_norm
+            
+        doc_norms = np.linalg.norm(docs, axis=1, keepdims=True)
+        doc_norms[doc_norms == 0] = 1.0
+        docs = docs / doc_norms
+        
+        similarities = np.dot(docs, q)
+
+        # Associate similarity score with each chunk
+        for idx, score in enumerate(similarities):
+            chunks[idx]["score"] = float(score)
+
+        # 5. Sort chunks by similarity score descending
+        chunks.sort(key=lambda x: x["score"], reverse=True)
+
+        # 6. Format and return the top_k chunks
+        top_chunks = chunks[:top_k]
+        formatted = []
+        for c in top_chunks:
+            formatted.append(
+                f"Title: {c['title']}\n"
+                f"URL: {c['url']}\n"
+                f"Snippet: {c['body']}\n"
+                f"Relevance Score: {c['score']:.4f}\n"
+                f"---"
+            )
+        return "\n".join(formatted)
+
     except Exception as e:
-        logger.error(f"DuckDuckGo search error: {e}")
+        logger.error(f"Semantic search error: {e}")
         return f"Error performing search: {str(e)}"
 
 # Schema for the search tool to be passed to OpenAI
@@ -159,7 +229,7 @@ class RedditContextAgent:
                         query = ""
 
                     # Run search
-                    search_result = search_web(query)
+                    search_result = search_web(query, client=self.client)
                     
                     # Track URLs returned in search results
                     # Simple extraction: search for 'URL: ' lines
