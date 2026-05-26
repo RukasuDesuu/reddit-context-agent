@@ -9,7 +9,7 @@ from reddit_client import RedditClient, RedditClientError
 from agent import RedditContextAgent
 
 # Load environment variables from .env
-load_dotenv()
+load_dotenv(override=True)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
