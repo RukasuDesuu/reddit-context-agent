@@ -22,3 +22,73 @@ The backend is built with FastAPI and designed around an autonomous agentic flow
 
 ## Credits & References
 - The lightweight, credential-free Reddit data extraction in `reddit_client.py` is inspired by standard public JSON API scraping patterns, similar to the approaches implemented in [reddit-json-scraper](https://github.com/0anxt/reddit-json-scraper).
+
+---
+
+## How to Use the API
+
+### 1. Prerequisites
+Make sure you have [uv](https://github.com/astral-sh/uv) installed.
+
+### 2. Setup Configuration
+Copy `.envsample` to a new file named `.env` and fill in your OpenAI API Key:
+```env
+OPENAI_API_KEY=your_actual_openai_api_key
+PORT=8000
+```
+
+### 3. Run the Server
+You can launch the FastAPI server locally by running:
+```bash
+uv run uvicorn main:app --reload
+```
+By default, the server will start at `http://localhost:8000`.
+
+### 4. Endpoints
+
+#### Health Check
+- **Endpoint**: `GET /`
+- **Response**:
+  ```json
+  {
+    "status": "healthy",
+    "service": "Reddit Context Agent Backend"
+  }
+  ```
+
+#### Explain Reddit Post
+- **Endpoint**: `POST /explain`
+- **Content-Type**: `application/json`
+- **Request Body**:
+  ```json
+  {
+    "url": "https://www.reddit.com/r/technology/comments/1tntmhj/post_slug/",
+    "model": "gpt-4o-mini"
+  }
+  ```
+  *(Note: `model` is optional and defaults to `gpt-4o-mini` if not specified. You can pass other OpenAI models like `gpt-4o`).*
+
+- **Response Body**:
+  ```json
+  {
+    "explanation": [
+      "Exactly 3 to 5 bullet points explaining the post context...",
+      "Further context detailing abbreviations, news, or slang...",
+      "Synthesis of external information found during web search..."
+    ],
+    "citations": [
+      "https://example.com/source-detail-1",
+      "https://another-source.org/news-article"
+    ]
+  }
+  ```
+
+- **Example request with curl**:
+  ```bash
+  curl -X POST http://localhost:8000/explain \
+    -H "Content-Type: application/json" \
+    -d '{
+      "url": "https://www.reddit.com/r/mildlyinteresting/comments/1tntmhj/i_made_a_uterus_pi%C3%B1ata_for_my_friend_who_had_a/",
+      "model": "gpt-4o-mini"
+    }'
+  ```
