@@ -39,6 +39,8 @@ def read_root():
 
 @app.post("/explain", response_model=ExplanationResponse)
 async def explain_reddit_post(payload: ExplainRequest):
+    import time
+    start_time = time.perf_counter()
     logger.info(f"Received explanation request for URL: {payload.url}")
     
     # Initialize components
@@ -47,7 +49,10 @@ async def explain_reddit_post(payload: ExplainRequest):
     
     # 1. Ingest and parse Reddit post
     try:
+        reddit_start = time.perf_counter()
         reddit_data = await reddit.fetch_and_parse(payload.url)
+        reddit_elapsed = time.perf_counter() - reddit_start
+        logger.info(f"Reddit ingestion took {reddit_elapsed:.4f} seconds")
     except RedditClientError as e:
         logger.error(f"Reddit extraction failed: {e}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -57,7 +62,13 @@ async def explain_reddit_post(payload: ExplainRequest):
 
     # 2. Run OpenAI agent loop
     try:
+        agent_start = time.perf_counter()
         explanation = await agent.explain_post(reddit_data, model_override=payload.model)
+        agent_elapsed = time.perf_counter() - agent_start
+        logger.info(f"Agent explanation loop took {agent_elapsed:.4f} seconds")
+        
+        total_elapsed = time.perf_counter() - start_time
+        logger.info(f"Total /explain request took {total_elapsed:.4f} seconds")
         return explanation
     except Exception as e:
         logger.error(f"Agent explanation loop failed: {e}")

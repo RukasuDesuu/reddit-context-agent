@@ -12,13 +12,18 @@ def search_web(query: str, client: OpenAI, max_results: int = 15, top_k: int = 5
     Performs a DuckDuckGo web search, chunks the results, embeds them using OpenAI,
     ranks them by semantic similarity to the query, and returns the top_k most relevant chunks.
     """
+    import time
+    start_time = time.perf_counter()
     logger.info(f"Executing semantic web search for: {query}")
     try:
         # 1. Fetch more raw results from DuckDuckGo
+        ddg_start = time.perf_counter()
         with DDGS() as ddgs:
             results = list(ddgs.text(query, max_results=max_results))
             if not results:
+                logger.info(f"DuckDuckGo search returned 0 results in {time.perf_counter() - ddg_start:.4f}s")
                 return "No search results found."
+        logger.info(f"DuckDuckGo search took {time.perf_counter() - ddg_start:.4f} seconds")
 
         # 2. Extract text and metadata for each result
         chunks = []
@@ -42,6 +47,7 @@ def search_web(query: str, client: OpenAI, max_results: int = 15, top_k: int = 5
             return "No valid search result content found."
 
         # 3. Generate embeddings in batch for all chunks
+        emb_start = time.perf_counter()
         logger.info(f"Generating embeddings for {len(chunks)} search chunks")
         chunk_texts = [c["text_to_embed"] for c in chunks]
         
@@ -58,8 +64,10 @@ def search_web(query: str, client: OpenAI, max_results: int = 15, top_k: int = 5
             model="text-embedding-3-small"
         )
         query_vector = query_response.data[0].embedding
+        logger.info(f"OpenAI embedding generation for chunks + query took {time.perf_counter() - emb_start:.4f} seconds")
 
         # 4. Compute cosine similarities using numpy
+        sim_start = time.perf_counter()
         import numpy as np
         q = np.array(query_vector)
         docs = np.array(doc_vectors)
@@ -80,6 +88,7 @@ def search_web(query: str, client: OpenAI, max_results: int = 15, top_k: int = 5
 
         # 5. Sort chunks by similarity score descending
         chunks.sort(key=lambda x: x["score"], reverse=True)
+        logger.info(f"Similarity computing & sorting took {time.perf_counter() - sim_start:.4f} seconds")
 
         # 6. Format and return the top_k chunks
         top_chunks = chunks[:top_k]
@@ -92,6 +101,8 @@ def search_web(query: str, client: OpenAI, max_results: int = 15, top_k: int = 5
                 f"Relevance Score: {c['score']:.4f}\n"
                 f"---"
             )
+        
+        logger.info(f"Total search_web RAG took {time.perf_counter() - start_time:.4f} seconds")
         return "\n".join(formatted)
 
     except Exception as e:
@@ -183,8 +194,10 @@ class RedditContextAgent:
         search_urls: Set[str] = set()
 
         # Run completion loop (up to 5 iterations of tool calling)
+        import time
         for iteration in range(5):
             logger.info(f"Agent iteration {iteration + 1}")
+            llm_start = time.perf_counter()
             try:
                 # We use beta.chat.completions.parse for structured output support
                 response = self.client.beta.chat.completions.parse(
@@ -196,6 +209,8 @@ class RedditContextAgent:
             except Exception as e:
                 logger.error(f"OpenAI completion error: {e}")
                 raise RuntimeError(f"OpenAI completion request failed: {str(e)}")
+            llm_elapsed = time.perf_counter() - llm_start
+            logger.info(f"OpenAI chat completion parse (iteration {iteration + 1}) took {llm_elapsed:.4f} seconds")
 
             message = response.choices[0].message
             tool_calls = message.tool_calls
