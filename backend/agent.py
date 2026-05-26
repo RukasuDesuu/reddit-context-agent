@@ -46,7 +46,9 @@ SEARCH_TOOL = {
                 }
             },
             "required": ["query"],
+            "additionalProperties": False,
         },
+        "strict": True,
     }
 }
 

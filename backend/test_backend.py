@@ -112,5 +112,10 @@ class TestAppRoutes(unittest.TestCase):
         self.assertEqual(data["citations"][0], "https://source1.com")
         mock_explain.assert_called_once()
 
+    def test_search_tool_strict(self):
+        from agent import SEARCH_TOOL
+        self.assertTrue(SEARCH_TOOL.get("function", {}).get("strict"))
+        self.assertFalse(SEARCH_TOOL.get("function", {}).get("parameters", {}).get("additionalProperties"))
+
 if __name__ == "__main__":
     unittest.main()
