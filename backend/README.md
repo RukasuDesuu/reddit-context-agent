@@ -104,3 +104,43 @@ By default, the server will start at `http://localhost:8000`.
       "model": "gpt-4o-mini"
     }'
   ```
+
+---
+
+## Example Output & Quality Comparison
+
+Here is an example demonstrating the impact of the **In-Memory Transient RAG** when querying a Minecraft post from `r/feedthebeast` (`https://www.reddit.com/r/feedthebeast/comments/1tnjexc/farmhouse_again/`):
+
+### Standard Non-RAG Search (Baseline)
+Without semantic filtering, the web search returns generic pages about "Feed The Beast". The explanation focuses on general concepts rather than the post itself:
+```json
+{
+  "explanation": [
+    "The post features a visually impressive Minecraft farmhouse creation, reflecting the game's aesthetics and community's creativity in building structures...",
+    "Feed The Beast, or FTB, is a modding community for Minecraft that focuses on enhancing gameplay through various modifications...",
+    "The enthusiastic comment from u/Hixmet emphasizes admiration for the build, typical of the supportive and creative culture in Minecraft..."
+  ],
+  "citations": [
+    "https://www.quora.com/Why-do-people-call-modded-Minecraft-feed-the-beast...",
+    "https://feed-the-beast.com/",
+    "https://feed-the-beast.fandom.com/wiki/Feed_The_Beast"
+  ]
+}
+```
+
+### In-Memory Transient RAG Search (Active)
+With RAG, the query is embedded, and the system fetches more results, ranking them semantically. The returned chunks are highly contextualized to the specific post (such as recognizing structural features like domes/windmills and referencing a similar previous post):
+```json
+{
+  "explanation": [
+    "The post showcases a beautifully designed farmhouse in Minecraft, featuring a whimsical style with unique architectural elements like domes and a windmill.",
+    "It highlights the creativity within the Minecraft community, particularly in the r/feedthebeast subreddit, which focuses on modded gameplay...",
+    "The comment from user u/Hixmet shows appreciation for the design and expresses a desire to replicate similar builds..."
+  ],
+  "citations": [
+    "https://www.reddit.com/r/feedthebeast/comments/1t4h7ar/farmhouse/",
+    "https://ftbwiki.org/",
+    "https://www.minecraft-schematics.com/schematic/19818/"
+  ]
+}
+```
