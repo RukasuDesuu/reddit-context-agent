@@ -178,6 +178,12 @@ function App() {
     }
   }
 
+  // Helper to truncate very long URLs to prevent layout distortion, adding browser tooltip on hover
+  const truncateUrl = (urlStr, maxLen = 45) => {
+    if (urlStr.length <= maxLen) return urlStr
+    return urlStr.substring(0, maxLen - 3) + '...'
+  }
+
   return (
     <div className="app-container">
       {/* Brand Header */}
@@ -423,7 +429,7 @@ function App() {
                         </div>
                         <div className="citation-info">
                           <span className="citation-domain">{domain}</span>
-                          <span className="citation-url">{citeUrl}</span>
+                          <span className="citation-url" title={citeUrl}>{truncateUrl(citeUrl, 45)}</span>
                         </div>
                         <ExternalLink size={14} className="citation-arrow" />
                       </a>
