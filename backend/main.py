@@ -67,6 +67,11 @@ async def explain_reddit_post(payload: ExplainRequest):
         agent_elapsed = time.perf_counter() - agent_start
         logger.info(f"Agent explanation loop took {agent_elapsed:.4f} seconds")
         
+        # Populate metadata for frontend
+        explanation.title = reddit_data.get("title")
+        explanation.subreddit = reddit_data.get("subreddit")
+        explanation.image_url = reddit_data.get("image_url")
+        
         total_elapsed = time.perf_counter() - start_time
         logger.info(f"Total /explain request took {total_elapsed:.4f} seconds")
         return explanation
