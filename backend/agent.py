@@ -200,12 +200,15 @@ class RedditContextAgent:
             llm_start = time.perf_counter()
             try:
                 # We use beta.chat.completions.parse for structured output support
-                response = self.client.beta.chat.completions.parse(
-                    model=model,
-                    messages=messages,
-                    tools=[SEARCH_TOOL],
-                    response_format=ExplanationResponse,
-                )
+                # Force no tools on the final iteration to guarantee a structured output response
+                kwargs = {
+                    "model": model,
+                    "messages": messages,
+                    "response_format": ExplanationResponse,
+                }
+                if iteration < 4:
+                    kwargs["tools"] = [SEARCH_TOOL]
+                response = self.client.beta.chat.completions.parse(**kwargs)
             except Exception as e:
                 logger.error(f"OpenAI completion error: {e}")
                 raise RuntimeError(f"OpenAI completion request failed: {str(e)}")
