@@ -29,10 +29,11 @@ FRONTEND_PORT=5173
 ```
 
 ### Step 2: Start the Backend Server
-Run the following commands to initialize dependencies and spin up the FastAPI server:
+Run the following commands to initialize and synchronize dependencies, then spin up the FastAPI server:
 
 ```bash
 cd backend
+uv sync
 uv run uvicorn main:app --reload
 ```
 *The backend API will be running on `http://localhost:8000`.*
@@ -48,10 +49,11 @@ npm run dev
 *Open your browser and navigate to `http://localhost:5173` to test the application.*
 
 ### Step 4 (Optional): Run the Evaluation Harness
-To benchmark the agent across 10 diverse test posts with an LLM-as-a-judge:
+To synchronize dependencies and run the benchmark harness:
 
 ```bash
 cd eval_harness
+uv sync
 uv run python run_eval.py
 ```
 *Results will be compiled in `./eval_harness/eval_results.md`.*
