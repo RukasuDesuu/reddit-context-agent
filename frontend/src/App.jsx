@@ -136,9 +136,9 @@ function App() {
     setError(null)
     setResult(null)
     const startTime = performance.now()
-
     try {
-      const response = await fetch('http://localhost:8000/explain', {
+      const backendPort = process.env.BACKEND_PORT || '8000'
+      const response = await fetch(`http://localhost:${backendPort}/explain`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

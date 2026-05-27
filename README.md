@@ -25,6 +25,7 @@ Create a `.env` file in the `./backend/` directory:
 # Inside ./backend/.env
 OPENAI_API_KEY=your_openai_api_key_here
 PORT=8000
+FRONTEND_PORT=5173
 ```
 
 ### Step 2: Start the Backend Server
