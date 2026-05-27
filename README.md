@@ -97,3 +97,11 @@ To run the backend unit tests (mocking external APIs):
 cd backend
 uv run python -m unittest test_backend.py
 ```
+
+---
+
+## Design Decisions & Platform Choice
+
+* **Platform Pivot (Reddit vs. Bluesky):** While the secondary PDF mentioned Bluesky, the primary assignment instructions explicitly stated: *"you’re free to choose any social platform or public text source (e.g., X, Reddit, news, blogs)."* I intentionally chose **Reddit** because its deep threading, niche communities, and frequent use of obscure internet slang provide a much richer testing ground to demonstrate the agent's web-search and context-resolution capabilities.
+* **Agentic RAG & Reranking:** To fulfill the ML-module bonus, the `search_web` tool doesn't just return raw DuckDuckGo results. It chunks the web results, generates OpenAI embeddings on the fly, computes cosine similarity against the query using Numpy, and injects only the top semantic matches into the agent's context window.
+* **Strict Constraints Verification:** The 3-5 bullet points constraint is strictly enforced at the API level using OpenAI's Structured Outputs (Pydantic parsing) rather than relying solely on prompt engineering.
