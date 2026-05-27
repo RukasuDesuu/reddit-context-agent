@@ -158,7 +158,8 @@ class RedditContextAgent:
             "Follow these strict constraints:\n"
             "1. Explain the post in exactly 3 to 5 clear, concise, and informative bullet points.\n"
             "2. Provide a list of all URLs you visited and used to synthesize the explanation in the 'citations' field of your response.\n"
-            "3. Keep the explanation objective, clear, and focused on clarifying terms and contextual background."
+            "3. You MUST execute the `search_web` tool at least once to retrieve external references and verify context. A response with empty citations is invalid.\n"
+            "4. Keep the explanation objective, clear, and focused on clarifying terms and contextual background."
         )
 
         # Build user message content (multimodal if image is present)
@@ -208,6 +209,12 @@ class RedditContextAgent:
                 }
                 if iteration < 4:
                     kwargs["tools"] = [SEARCH_TOOL]
+                    # Force the model to use the search tool on the first iteration to guarantee RAG context retrieval and citation population
+                    if iteration == 0:
+                        kwargs["tool_choice"] = {
+                            "type": "function",
+                            "function": {"name": "search_web"}
+                        }
                 response = self.client.beta.chat.completions.parse(**kwargs)
             except Exception as e:
                 logger.error(f"OpenAI completion error: {e}")
